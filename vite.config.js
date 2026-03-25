@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
-  base: "/TableTone/",
+  base: "/TableToneClient/",
   server: {
     port: 5173,
   },
