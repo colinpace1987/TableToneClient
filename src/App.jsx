@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  API_ORIGIN,
   createEstablishment,
   fetchEstablishments,
   fetchRecentPhotos,
@@ -34,6 +35,7 @@ export default function App() {
   const [placeCity, setPlaceCity] = useState("");
   const [placeState, setPlaceState] = useState("");
   const [recentPhotos, setRecentPhotos] = useState([]);
+  const [recentNotes, setRecentNotes] = useState([]);
   const [flaggingId, setFlaggingId] = useState(null);
   const [flagReason, setFlagReason] = useState("");
   const [showReport, setShowReport] = useState(false);
@@ -94,8 +96,10 @@ export default function App() {
       try {
         const data = await fetchRecentPhotos(selected.id);
         setRecentPhotos(data.photos || []);
+        setRecentNotes(data.notes || []);
       } catch {
         setRecentPhotos([]);
+        setRecentNotes([]);
       }
     };
     if (step === "rate" && selected) {
@@ -118,6 +122,7 @@ export default function App() {
       try {
         const data = await fetchRecentPhotos(selected.id);
         setRecentPhotos(data.photos || []);
+        setRecentNotes(data.notes || []);
       } catch {
         // ignore
       }
@@ -154,6 +159,7 @@ export default function App() {
     setPlaceCity("");
     setPlaceState("");
     setRecentPhotos([]);
+    setRecentNotes([]);
     setFlaggingId(null);
     setFlagReason("");
     setShowReport(false);
@@ -192,7 +198,7 @@ export default function App() {
       </div>
       <header className="header">
         <h1>TableTone</h1>
-        <p>Rate the feel of a place — no login, no location.</p>
+        <p>Rate the feel of a place — no login.</p>
       </header>
 
       <div className="legal-links">
@@ -275,7 +281,7 @@ export default function App() {
       {step === "zip" && (
         <form className="card" onSubmit={handleFind}>
           <label className="label">
-            Enter a ZIP code
+            Enter a 5-digit ZIP code
             <input
               className="input"
               value={zip}
@@ -398,84 +404,119 @@ export default function App() {
 
       {step === "rate" && selected && (
         <form className="card" onSubmit={handleSubmit}>
-          <div className="rate-header">
-            <h2>Rate {selected.name}</h2>
-            <button
-              type="button"
-              className="link-button"
-              onClick={() => {
-                setReportType("Inappropriate post");
-                setShowReport(true);
-              }}
-            >
-              Report this place
-            </button>
-          </div>
-          <div className="criteria">
-            {CRITERIA.map((c) => (
-              <div className="criterion" key={c.key}>
-                <div className="criterion-label">{c.label}</div>
-                <div className="scale">
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <button
-                      type="button"
-                      key={n}
-                      className={scores[c.key] === n ? "pill active" : "pill"}
-                      onClick={() => setScores((s) => ({ ...s, [c.key]: n }))}
-                    >
-                      {n}
-                    </button>
-                  ))}
-                </div>
+          <div className="rate-layout">
+            <div className="rate-left">
+              <div className="rate-header">
+                <h2>Rate {selected.name}</h2>
+                <button
+                  type="button"
+                  className="link-button"
+                  onClick={() => {
+                    setReportType("Inappropriate post");
+                    setShowReport(true);
+                  }}
+                >
+                  Report this place
+                </button>
               </div>
-            ))}
-          </div>
+              <div className="subtitle">
+                {selected.address ||
+                  [selected.city, selected.state].filter(Boolean).join(", ") ||
+                  "No address"}
+              </div>
 
-          <label className="label">
-            Optional note
-            <textarea
-              className="textarea"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Any context?"
-              rows={3}
-            />
-          </label>
+              <div className="photo-panel">
+                <div className="photo-panel-title">Recent photos</div>
+                {recentPhotos.length === 0 ? (
+                  <div className="muted">No photos yet.</div>
+                ) : (
+                  <div className="photo-grid">
+                    {recentPhotos.map((p) => (
+                      <div key={p.id} className="photo-card">
+                        <img
+                          className="photo-thumb"
+                          src={
+                            p.photo_path?.startsWith("http")
+                              ? p.photo_path
+                              : `${API_ORIGIN}${p.photo_path}`
+                          }
+                          alt="Recent upload"
+                        />
+                        <button
+                          type="button"
+                          className="link-button flag-button"
+                          onClick={() => setFlaggingId(p.id)}
+                        >
+                          Report
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-          <label className="label">
-            Optional photo
-            <input
-              className="input"
-              type="file"
-              accept="image/*"
-              onChange={(e) => setPhoto(e.target.files?.[0] || null)}
-            />
-          </label>
+              <div className="notes-panel">
+                <div className="photo-panel-title">Recent notes</div>
+                {recentNotes.length === 0 ? (
+                  <div className="muted">No notes yet.</div>
+                ) : (
+                  <ul className="notes-list">
+                    {recentNotes.map((n) => (
+                      <li key={n.id} className="note-item">
+                        {n.note}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
 
-          <div className="photo-panel">
-            <div className="photo-panel-title">Recent photos</div>
-            {recentPhotos.length === 0 ? (
-              <div className="muted">No photos yet.</div>
-            ) : (
-              <div className="photo-grid">
-                {recentPhotos.map((p) => (
-                  <div key={p.id} className="photo-card">
-                    <img
-                      className="photo-thumb"
-                      src={`http://localhost:4000${p.photo_path}`}
-                      alt="Recent upload"
-                    />
-                    <button
-                      type="button"
-                      className="link-button flag-button"
-                      onClick={() => setFlaggingId(p.id)}
-                    >
-                      Report
-                    </button>
+            <div className="rate-right">
+              <div className="criteria">
+                <div className="scale-hint">
+                  <span>1 = Poor</span>
+                  <span>5 = Excellent</span>
+                </div>
+                {CRITERIA.map((c) => (
+                  <div className="criterion" key={c.key}>
+                    <div className="criterion-label">{c.label}</div>
+                    <div className="scale">
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <button
+                          type="button"
+                          key={n}
+                          className={scores[c.key] === n ? "pill active" : "pill"}
+                          onClick={() => setScores((s) => ({ ...s, [c.key]: n }))}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 ))}
               </div>
-            )}
+
+              <label className="label">
+                Optional note
+                <textarea
+                  className="textarea"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="Any context?"
+                  rows={3}
+                />
+              </label>
+
+              <label className="label">
+                Optional photo
+                <input
+                  className="input"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setPhoto(e.target.files?.[0] || null)}
+                />
+              </label>
+            </div>
           </div>
 
           {flaggingId && (
